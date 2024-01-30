@@ -2,10 +2,13 @@ package co.innovaciones.bflow_server.rest
 
 import co.innovaciones.bflow_server.model.AuthenticationRequestDTO
 import co.innovaciones.bflow_server.model.AuthenticationResponseDTO
+import co.innovaciones.bflow_server.model.NewPassDTO
 import co.innovaciones.bflow_server.model.UserDTO
+import co.innovaciones.bflow_server.model.validators.RecoveryDTO
 import co.innovaciones.bflow_server.service.JwtTokenService
 import co.innovaciones.bflow_server.service.JwtUserDetailsService
 import co.innovaciones.bflow_server.service.UserService
+import co.innovaciones.bflow_server.util.NotFoundException
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.validation.Valid
@@ -26,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
+import java.time.OffsetDateTime
+import java.util.UUID
 
 
 @RestController
@@ -38,8 +43,9 @@ class UserResource(
     private val jwtAuthenticationManager: AuthenticationManager,
     private val jwtUserDetailsService: JwtUserDetailsService,
     private val jwtTokenService: JwtTokenService,
-    private val userService: UserService
-) {
+    private val userService: UserService,
+
+    ) {
 
     @SecurityRequirement(name = "bearer-jwt")
     @GetMapping
@@ -48,7 +54,7 @@ class UserResource(
     @SecurityRequirement(name = "bearer-jwt")
     @GetMapping("/{id}")
     fun getUser(@PathVariable(name = "id") id: Long): ResponseEntity<UserDTO> =
-            ResponseEntity.ok(userService.get(id))
+        ResponseEntity.ok(userService.get(id))
 
     @SecurityRequirement(name = "bearer-jwt")
     @PostMapping
@@ -79,17 +85,61 @@ class UserResource(
             AuthenticationResponseDTO {
         try {
             jwtAuthenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken(authenticationRequestDTO.username,
-                authenticationRequestDTO.password)
+                UsernamePasswordAuthenticationToken(
+                    authenticationRequestDTO.username,
+                    authenticationRequestDTO.password
+                )
             )
         } catch (ex: BadCredentialsException) {
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
         }
-
         val userDetails = jwtUserDetailsService.loadUserByUsername(authenticationRequestDTO.username!!)
         val authenticationResponseDTO = AuthenticationResponseDTO()
         authenticationResponseDTO.accessToken = jwtTokenService.generateToken(userDetails)
         return authenticationResponseDTO
     }
 
+    @PostMapping("/recover-password")
+    fun recoverPassword(@RequestBody @Valid recoveryDTO: RecoveryDTO): ResponseEntity<Long> {
+        try {
+            val userName = recoveryDTO.username!!;
+            val userDTO = userService.get(userName);
+            print(userDTO)
+            val token = UUID.randomUUID().toString()
+            userDTO.recoveryToken = token
+            userDTO.tokenExpirationDate = OffsetDateTime.now().plusMinutes(15)
+            userService.update(userDTO.id!!, userDTO)
+            return ResponseEntity.ok(userDTO.id!!)
+            // Todo: send an Email with the token
+        } catch (ex: NotFoundException) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        }
+    }
+
+    @PostMapping("/create-new-password")
+    fun createNewPassword(@RequestBody @Valid newPassDTO: NewPassDTO): ResponseEntity<Long> {
+        try {
+            val recPassToken = newPassDTO.token!!;
+            val recPass = newPassDTO.password!!;
+            val userDTO = userService.getUserByToken(recPassToken);
+            if (userDTO.tokenExpirationDate!! <= OffsetDateTime.now()) {
+
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Token has expired")
+            }
+            userDTO.password = recPass
+            userService.update(userDTO.id!!, userDTO)
+            return ResponseEntity.ok(userDTO.id!!) //"Token has been successfully changed.")
+        } catch (ex: NotFoundException) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        }
+
+    }
+
 }
+
+
+
+
+
+
+

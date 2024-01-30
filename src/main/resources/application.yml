@@ -25,6 +25,9 @@ spring:
 springdoc:
   pathsToMatch: /api/**
 
+jwt:
+  secret: fb1f9ad1-17ee-42f5-a5fe-3a1c75068b76
+
 aws:
   s3:
     access-key: ${STORAGE_ACCESS_KEY}

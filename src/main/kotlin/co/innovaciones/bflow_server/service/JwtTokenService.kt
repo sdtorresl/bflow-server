@@ -19,9 +19,9 @@ class JwtTokenService(
     secret: String
 ) {
 
-    val hmac512: Algorithm
+    final var hmac512: Algorithm? = null
 
-    val verifier: JWTVerifier
+    final var verifier: JWTVerifier? = null
     init {
         this.hmac512 = Algorithm.HMAC512(secret)
         this.verifier = JWT.require(this.hmac512).build()
@@ -38,7 +38,7 @@ class JwtTokenService(
     }
 
     fun validateTokenAndGetUsername(token: String): String? = try {
-        verifier.verify(token).subject
+        verifier?.verify(token)?.subject
     } catch (verificationEx: JWTVerificationException) {
         log.warn("token invalid: {}", verificationEx.message)
         null

@@ -18,12 +18,12 @@ class JwtUserDetailsService(
 
     override fun loadUserByUsername(username: String): JwtUserDetails {
         val user = userRepository.findByUsernameIgnoreCase(username)
-        if (user == null) {
+        if (user.isEmpty) {
             log.warn("user not found: {}", username)
             throw UsernameNotFoundException("User $username not found")
         }
         val authorities = listOf(SimpleGrantedAuthority(UsersRole.ADMIN.name))
-        return JwtUserDetails(user.id, username, user.password, authorities)
+        return JwtUserDetails(user.get().id, username, user.get().password, authorities)
     }
 
     companion object {

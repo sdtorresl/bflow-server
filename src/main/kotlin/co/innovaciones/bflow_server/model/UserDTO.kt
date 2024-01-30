@@ -2,6 +2,7 @@ package co.innovaciones.bflow_server.model
 
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import java.time.OffsetDateTime
 
 
 class UserDTO {
@@ -27,5 +28,9 @@ class UserDTO {
     @NotNull
     @Size(max = 255)
     var email: String? = null
+
+    var recoveryToken: String? = null
+
+    var tokenExpirationDate: OffsetDateTime? = null
 
 }

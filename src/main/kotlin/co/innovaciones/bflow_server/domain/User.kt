@@ -57,6 +57,12 @@ class User {
     )
     var email: String? = null
 
+    @Column
+    var recoveryToken: String? = null
+
+    @Column
+    var recoveryTokenExpired: OffsetDateTime? = null
+
     @CreatedDate
     @Column(
         nullable = false,
@@ -67,5 +73,7 @@ class User {
     @LastModifiedDate
     @Column(nullable = false)
     var lastUpdated: OffsetDateTime? = null
+
+    var tokenExpirationDate: OffsetDateTime? = null
 
 }
